@@ -1,0 +1,32 @@
+# AnhDev Store — Worker cầu nối số dư bot Telegram ↔ web store
+# Deploy:  npx wrangler deploy
+name = "anhdev-balance"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+# Tạo database bằng: npx wrangler d1 create anhdev-balance
+# rồi dán database_id trả về vào đây.
+[[d1_databases]]
+binding = "DB"
+database_name = "anhdev-balance"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[vars]
+# Thông tin chuyển khoản trả về cho web (không phải secret — ai cũng thấy khi
+# quét VietQR). Điền đúng tài khoản nhận tiền của shop.
+BANK_CODE = "MB"
+BANK_ACCOUNT = "0000000000"
+BANK_HOLDER = "NGUYEN VAN A"
+
+# Chỉ các origin này được gọi API. Thêm domain riêng của shop nếu có.
+ALLOWED_ORIGINS = "https://bottelegram-devbuinhat.github.io,https://web.telegram.org,http://localhost:3000,http://127.0.0.1:3000"
+
+# Hạn mức nạp (VND) và tuổi tối đa của initData (giây). 0 = không kiểm tra tuổi.
+MIN_DEPOSIT = "20000"
+MAX_DEPOSIT = "5000000"
+MAX_AUTH_AGE_SECONDS = "86400"
+
+# Secrets (KHÔNG khai báo ở đây, set bằng lệnh):
+#   npx wrangler secret put BOT_TOKEN        # token bot Telegram, dùng verify initData
+#   npx wrangler secret put SYNC_BOT_TOKEN   # chuỗi ngẫu nhiên bot dùng để gọi /api/admin/*

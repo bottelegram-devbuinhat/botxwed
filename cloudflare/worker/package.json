@@ -1,0 +1,17 @@
+{
+  "name": "anhdev-balance-worker",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker API cầu nối số dư bot Telegram với AnhDev Store",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute anhdev-balance --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute anhdev-balance --local --file=./schema.sql",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
