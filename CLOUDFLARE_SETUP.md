@@ -127,13 +127,34 @@ curl -s -o /dev/null -w "%{http_code}\n" https://anhdev-balance.xxx.workers.dev/
 
 ## 5. Cấu hình web store
 
-Mở `webstore/index.html` (repo `anhdev-store`), tìm:
+`anhdev-store/index.html` **đã có sẵn toàn bộ client** gọi Worker — không cần viết thêm gì:
+
+* `GET /api/balance?telegram_id=...` kèm header `X-Telegram-Init-Data`
+  (Mini App) hoặc `X-Telegram-Login-Data` (Login Widget) → hiện số dư thật của bot
+  và nhãn **“✓ Đồng bộ bot”**.
+* `POST /api/deposit` khi bấm **Tạo mã VietQR** → hoá đơn `NAP<id>T<4hex>` của Worker.
+* `GET /api/deposit/status?code=...` poll 6 giây/lần cho tới khi bot duyệt (`approved`).
+* API chưa cấu hình / lỗi / chưa đăng nhập Telegram → ví dùng số dư demo và ghi rõ
+  **“Chưa đồng bộ với bot”**.
+
+Việc duy nhất phải làm là điền URL Worker vào biến `API_BASE` (khoảng dòng 934):
 
 ```js
 var API_BASE = "https://anhdev-balance.REPLACE-WITH-YOUR-SUBDOMAIN.workers.dev";
 ```
 
-Thay bằng URL Worker, commit và push lên GitHub Pages. Sau khi tải lại:
+Sửa bằng editor hoặc một lệnh (file ~18 MB nên `sed` nhanh hơn mở trình duyệt):
+
+```bash
+cd anhdev-store
+grep -n "var API_BASE" index.html     # xem đúng dòng đang có
+sed -i 's|https://anhdev-balance.REPLACE-WITH-YOUR-SUBDOMAIN.workers.dev|https://anhdev-balance.ten-tai-khoan.workers.dev|' index.html
+grep -n "var API_BASE" index.html     # xác nhận đã thay
+git commit -am "Point web store at the Cloudflare Worker" && git push
+```
+
+Giữ nguyên chuỗi `REPLACE-WITH-YOUR-SUBDOMAIN` thì web tự coi là “chưa cấu hình”.
+Sau khi push và tải lại trang:
 
 * Mở shop trong **Telegram Mini App** → ví hiện số dư thật, có dòng “✓ Đồng bộ bot”.
 * Đăng nhập **Telegram Login Widget** trên web thường cũng được (payload đã ký được gửi
@@ -162,7 +183,15 @@ node tests/worker_api_test.mjs
 
 # Bot: ví → cloud_sync → HTTP server giả lập
 python3 tests/bot_sync_e2e.py
+
+# Chặn cú pháp f-string chỉ Python 3.12 chấp nhận (host chạy 3.11)
+python3 tests/check_fstring_compat.py bot
 ```
+
+`tests/bot_sync_e2e.py` tự tìm code bot: ưu tiên `bot/`, rồi gốc repo, rồi thư mục
+con; nếu repo chỉ có `BOT.zip` (bản clone sạch) thì tự giải nén ra thư mục tạm —
+chạy được ngay, không cần `unzip` tay. Muốn dùng bản đã giải nén thì:
+`mkdir -p bot && unzip -q BOT.zip -d bot`.
 
 ## 7. Vận hành & xử lý sự cố
 

@@ -9,9 +9,51 @@ import asyncio
 import os
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
-BASE = Path(__file__).resolve().parent.parent / "bot"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def find_bot_code(root: Path) -> Path:
+    """Tìm thư mục chứa code bot, dùng được cho cả clone repo lẫn bản đã giải nén.
+
+    Thứ tự: <repo>/bot/ (giải nén BOT.zip vào bot/), <repo>/ (code bot ngay ở
+    gốc repo), rồi <repo>/<một thư mục con duy nhất>/ (BOT.zip giải nén ra
+    BOTLQ/ hay tên bất kỳ).
+    """
+    def is_bot_dir(p: Path) -> bool:
+        return (p / "main.py").is_file() and (p / "database").is_dir()
+
+    for candidate in (root / "bot", root):
+        if is_bot_dir(candidate):
+            return candidate
+    for candidate in sorted(p for p in root.iterdir() if p.is_dir()):
+        if is_bot_dir(candidate):
+            return candidate
+
+    # Clone repo chỉ có BOT.zip (không có bot/): tự giải nén ra thư mục tạm để
+    # `python3 tests/bot_sync_e2e.py` chạy được ngay, không cần thao tác tay.
+    archive = root / "BOT.zip"
+    if archive.is_file():
+        staging = Path(tempfile.mkdtemp(prefix="bot-src-"))
+        with zipfile.ZipFile(archive) as zf:
+            zf.extractall(staging)
+        for candidate in (staging, *sorted(p for p in staging.iterdir() if p.is_dir())):
+            if is_bot_dir(candidate):
+                print(f"[bot_sync_e2e] giải nén {archive.name} → {candidate}")
+                return candidate
+
+    sys.exit(
+        "Không tìm thấy code bot.\n"
+        f"Đã tìm trong: {root / 'bot'}, {root}, các thư mục con của {root}, "
+        f"và trong {archive.name} (nếu có).\n"
+        "Cách chạy: giải nén BOT.zip vào thư mục bot/ của repo rồi chạy lại:\n"
+        "  mkdir -p bot && unzip -q BOT.zip -d bot && python3 tests/bot_sync_e2e.py"
+    )
+
+
+BASE = find_bot_code(REPO_ROOT)
 TMP = Path(tempfile.mkdtemp(prefix="anhdev-sync-test-"))
 os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{TMP / 'test.db'}"
 os.environ["CLOUDFLARE_SYNC_TOKEN"] = "sync-secret-test"
